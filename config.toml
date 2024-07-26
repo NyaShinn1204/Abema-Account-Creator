@@ -1,0 +1,10 @@
+[general]
+threads = 10
+debug   = false
+
+[payment]
+cc_number    = ""
+cc_exp_month = ""
+cc_exp_year  = ""
+cc_name      = ""
+cc_cvv       = ""
