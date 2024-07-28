@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
@@ -105,7 +106,11 @@ func main() {
 
 	resultChan := make(chan []byte, numThreads)
 
-	// スレッドを生成するためのループ
+	// コンテキストを作成
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// スレッドを生成するためのルーチン
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
@@ -117,7 +122,7 @@ func main() {
 			case <-ticker.C:
 				for i := 0; i < numThreads; i++ {
 					wg.Add(1)
-					go main_thread(tempmail, &wg, resultChan)
+					go main_thread(ctx, tempmail, &wg, resultChan)
 				}
 			case <-quit:
 				return
@@ -137,6 +142,7 @@ func main() {
 	go func() {
 		<-sigs
 		close(quit)
+		cancel()  // すべてのゴルーチンにキャンセルシグナルを送る
 		wg.Wait() // すべてのゴルーチンが終了するのを待つ
 		fmt.Println("\nReceived an interrupt, stopping...")
 		os.Exit(0)
@@ -146,123 +152,299 @@ func main() {
 	select {}
 }
 
-func main_thread(tempmail string, wg *sync.WaitGroup, resultChan chan<- []byte) {
+func main_thread(ctx context.Context, tempmail string, wg *sync.WaitGroup, resultChan chan<- []byte) {
 	defer wg.Done()
-	jar, err := cookiejar.New(nil)
-	if err != nil {
-		panic(err)
-	}
-
-	s := time.Now()
-
-	poipoi_token := ""
-	poipoi_sessionhash := ""
-	if tempmail == "m.kuku.lu" {
-		if config.Tempmail.Poipoi_token == "" || config.Tempmail.Poipoi_sessionhash == "" {
-			panic("[-] Please Insert Token, Sessionhash!!")
-		} else {
-			poipoi_token = config.Tempmail.Poipoi_token
-			poipoi_sessionhash = config.Tempmail.Poipoi_sessionhash
-		}
-	}
-	//tempmail := "m.kuku.lu"
-	//tempmail := "tempmail.lol"
-	session := &http.Client{Timeout: time.Duration(10 * time.Second), Jar: jar}
-	password := "password"
-	accountUUID := uuid.New()
-	applicationKeySecret := generate_applicationkeysecret(accountUUID.String())
-
-	email, email_token, err := gen_email(tempmail, session, poipoi_token, poipoi_sessionhash)
-	if err != nil {
-		fmt.Println("Error:", err)
-		panic(err)
-	}
-	//fmt.Println(password, accountUUID, applicationKeySecret, email_token)
-	//gen_test()
-	payment_url := gen_payment_url()
-	premium_token, err := gen_token(payment_url)
-
-	//fmt.Println(email, email_token)
-	//fmt.Println(password, accountUUID, applicationKeySecret, email, email_token, premium_token)
-
-	jsonData1 := map[string]string{
-		"deviceId":             accountUUID.String(),
-		"applicationKeySecret": applicationKeySecret,
-	}
-	jsonBytes1, _ := json.Marshal(jsonData1)
-
-	resp1, err := http.Post("https://api.p-c3-e.abema-tv.com/v1/users", "application/json", bytes.NewBuffer(jsonBytes1))
-	if err != nil {
-		fmt.Println("Error:", err)
-		panic(1)
-	}
-	defer resp1.Body.Close()
-
-	body, err := ioutil.ReadAll(resp1.Body)
-	if err != nil {
-		fmt.Println("Error reading response body:", err)
-		panic(1)
-	}
-
-	if resp1.StatusCode == http.StatusOK {
-		var response map[string]interface{}
-		if err := json.Unmarshal(body, &response); err != nil {
-			fmt.Println("Error decoding response body:", err)
-			panic(1)
-		}
-
-		abema_token, ok := response["token"].(string)
-		if !ok {
-			fmt.Println("Error: token field is missing or not a string")
-			panic(1)
-		}
-
-		profile, ok := response["profile"].(map[string]interface{})
-		if !ok {
-			fmt.Println("Error: profile field is missing or not a map")
-			panic(1)
-		}
-		userID, ok := profile["userId"].(string)
-		if !ok {
-			fmt.Println("Error: userId field is missing or not a string")
-			panic(1)
-		}
-
-		fmt.Println("NyaGenV2 - "+Magenta+"[GETTED..]"+Reset+"          UserID -> ", userID, "                Status -> ", resp1.StatusCode)
-		//fmt.Println(email, password, accUUID, applicationKeySecret)
-
-		jsonData2 := map[string]interface{}{
-			"email": email,
-		}
-		jsonBytes2, err := json.Marshal(jsonData2)
+	select {
+	case <-ctx.Done():
+		fmt.Println("Thread cancelled")
+		return
+	default:
+		jar, err := cookiejar.New(nil)
 		if err != nil {
-			fmt.Println("Error encoding JSON data:", err)
-			panic(1)
+			panic(err)
 		}
 
-		req, err := http.NewRequest("PUT", "https://api.p-c3-e.abema-tv.com/v1/users/"+userID+"/email", bytes.NewBuffer(jsonBytes2))
+		s := time.Now()
+
+		poipoi_token := ""
+		poipoi_sessionhash := ""
+		if tempmail == "m.kuku.lu" {
+			if config.Tempmail.Poipoi_token == "" || config.Tempmail.Poipoi_sessionhash == "" {
+				panic("[-] Please Insert Token, Sessionhash!!")
+			} else {
+				poipoi_token = config.Tempmail.Poipoi_token
+				poipoi_sessionhash = config.Tempmail.Poipoi_sessionhash
+			}
+		}
+		//tempmail := "m.kuku.lu"
+		//tempmail := "tempmail.lol"
+		session := &http.Client{Timeout: time.Duration(10 * time.Second), Jar: jar}
+		password := "password"
+		accountUUID := uuid.New()
+		applicationKeySecret := generate_applicationkeysecret(accountUUID.String())
+
+		email, email_token, err := gen_email(tempmail, session, poipoi_token, poipoi_sessionhash)
 		if err != nil {
-			fmt.Println("Error creating request:", err)
-			panic(1)
+			fmt.Println("Error:", err)
+			panic(err)
 		}
+		//fmt.Println(password, accountUUID, applicationKeySecret, email_token)
+		//gen_test()
+		payment_url := gen_payment_url()
+		premium_token, err := gen_token(payment_url)
 
-		req.Header.Set("Authorization", "bearer "+abema_token)
-		req.Header.Set("Content-Type", "application/json")
+		//fmt.Println(email, email_token)
+		//fmt.Println(password, accountUUID, applicationKeySecret, email, email_token, premium_token)
 
-		resp2, err := session.Do(req)
+		jsonData1 := map[string]string{
+			"deviceId":             accountUUID.String(),
+			"applicationKeySecret": applicationKeySecret,
+		}
+		jsonBytes1, _ := json.Marshal(jsonData1)
+
+		resp1, err := http.Post("https://api.p-c3-e.abema-tv.com/v1/users", "application/json", bytes.NewBuffer(jsonBytes1))
 		if err != nil {
-			fmt.Println("Error sending request:", err)
+			fmt.Println("Error:", err)
 			panic(1)
 		}
-		defer resp2.Body.Close()
+		defer resp1.Body.Close()
 
-		//fmt.Println(email)
+		body, err := ioutil.ReadAll(resp1.Body)
+		if err != nil {
+			fmt.Println("Error reading response body:", err)
+			panic(1)
+		}
 
-		if resp2.StatusCode == http.StatusAccepted {
+		if resp1.StatusCode == http.StatusOK {
+			var response map[string]interface{}
+			if err := json.Unmarshal(body, &response); err != nil {
+				fmt.Println("Error decoding response body:", err)
+				panic(1)
+			}
 
-			if tempmail == "m.kuku.lu" {
-				// メールが存在するかのチェック
-				for {
+			abema_token, ok := response["token"].(string)
+			if !ok {
+				fmt.Println("Error: token field is missing or not a string")
+				panic(1)
+			}
+
+			profile, ok := response["profile"].(map[string]interface{})
+			if !ok {
+				fmt.Println("Error: profile field is missing or not a map")
+				panic(1)
+			}
+			userID, ok := profile["userId"].(string)
+			if !ok {
+				fmt.Println("Error: userId field is missing or not a string")
+				panic(1)
+			}
+
+			fmt.Println("NyaGenV2 - "+Magenta+"[GETTED..]"+Reset+"          UserID -> ", userID, "                Status -> ", resp1.StatusCode)
+			//fmt.Println(email, password, accUUID, applicationKeySecret)
+
+			jsonData2 := map[string]interface{}{
+				"email": email,
+			}
+			jsonBytes2, err := json.Marshal(jsonData2)
+			if err != nil {
+				fmt.Println("Error encoding JSON data:", err)
+				panic(1)
+			}
+
+			req, err := http.NewRequest("PUT", "https://api.p-c3-e.abema-tv.com/v1/users/"+userID+"/email", bytes.NewBuffer(jsonBytes2))
+			if err != nil {
+				fmt.Println("Error creating request:", err)
+				panic(1)
+			}
+
+			req.Header.Set("Authorization", "bearer "+abema_token)
+			req.Header.Set("Content-Type", "application/json")
+
+			resp2, err := session.Do(req)
+			if err != nil {
+				fmt.Println("Error sending request:", err)
+				panic(1)
+			}
+			defer resp2.Body.Close()
+
+			//fmt.Println(email)
+
+			if resp2.StatusCode == http.StatusAccepted {
+
+				if tempmail == "m.kuku.lu" {
+					// メールが存在するかのチェック
+					for {
+						response, err := http.NewRequest("GET", fmt.Sprintf("https://m.kuku.lu/recv._ajax.php?&q=%s 【ABEMA】メールアドレス登録確認&csrf_token_check=%s", email, poipoi_token), nil)
+						if err != nil {
+							fmt.Println("Error:", err)
+							panic(1)
+						}
+
+						cookieCsrf := &http.Cookie{Name: "cookie_csrf_token", Value: poipoi_token}
+						cookieSessionhash := &http.Cookie{Name: "cookie_sessionhash", Value: poipoi_sessionhash}
+
+						response.AddCookie(cookieCsrf)
+						response.AddCookie(cookieSessionhash)
+
+						resp3, err := session.Do(response)
+						if err != nil {
+							fmt.Println("Error:", err)
+							panic(1)
+						}
+
+						defer resp3.Body.Close()
+
+						doc, err := goquery.NewDocumentFromResponse(resp3)
+						if err != nil {
+							fmt.Println("Error parsing HTML:", err)
+							panic(1)
+						}
+
+						if doc.Find("span.view_listcnt").Text() == "1" {
+							//fmt.Println("m.kuku.lu PASSED!!!")
+							break
+						}
+						time.Sleep(2 * time.Second)
+					}
+				}
+				if tempmail == "tempmail.lol" {
+					//メールが存在するかのチェック、存在したらメールのデータをtempmail_lol_inboxに指定
+					for {
+						time.Sleep(1 * time.Second)
+						url := fmt.Sprintf("https://api.tempmail.lol/auth/%s", email_token)
+						req, err := http.NewRequest("GET", url, nil)
+						if err != nil {
+							panic(1)
+						}
+
+						resp, err := session.Do(req)
+						if err != nil {
+							panic(1)
+						}
+
+						if resp.StatusCode != http.StatusOK {
+							resp.Body.Close()
+							fmt.Println("Error:", fmt.Errorf("unexpected status code: %d", resp.StatusCode))
+							panic(1)
+						}
+
+						defer resp.Body.Close()
+
+						var response map[string]interface{}
+						if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+							panic(1)
+						}
+
+						emails, ok := response["email"].([]interface{})
+						if !ok || len(emails) == 0 {
+							time.Sleep(2 * time.Second)
+							continue
+						}
+						// Assuming only one email is expected, return the first one
+						if len(emails) >= 1 {
+							//fmt.Println(email, token)
+							//fmt.Println("tempmail.lol PASSED!!!")
+							tempmail_lol_inbox = emails
+							//fmt.Println(url)
+							break
+							// emailsスライスをループして、"認証コード"が含まれているかどうかをチェック
+							// emailsスライスをループして、"認証コード"が含まれているかどうかをチェック
+							// インターフェースの値を文字列にキャストし、"認証コード"が含まれているかどうかをチェック
+							// 各メールの本文について確認
+							// 各メールの本文について確認
+							//for _, emailBody := range emails {
+							//	// map型であることを確認
+							//	if emailMap, ok := emailBody.(map[string]interface{}); ok {
+							//		// "body"キーが存在するかどうかを確認
+							//		if body, ok := emailMap["body"].(string); ok {
+							//			// 認証コードを含むかどうかを確認
+							//			if strings.Contains(body, "認証コード") {
+							//				fmt.Println("認証コードが含まれています")
+							//				tempmail_lol_inbox = emails
+							//				break
+							//			} else {
+							//				fmt.Println("認証コードが含まれていません")
+							//				time.Sleep(2 * time.Second)
+							//				continue
+							//			}
+							//		} else {
+							//			fmt.Println("メールの本文が文字列ではありません")
+							//		}
+							//	} else {
+							//		fmt.Println("メールがmap[string]interface{}型ではありません")
+							//	}
+							//}
+						}
+					}
+				}
+				if tempmail == "tempmail.io" {
+					//メールが存在するかのチェック、存在したらメールのデータをtempmail_lol_inboxに指定
+					for {
+						time.Sleep(1 * time.Second)
+						url := fmt.Sprintf("https://api.internal.temp-mail.io/api/v3/email/%s/messages", email)
+						req, err := http.NewRequest("GET", url, nil)
+						if err != nil {
+							panic(1)
+						}
+
+						resp, err := session.Do(req)
+						if err != nil {
+							panic(1)
+						}
+
+						if resp.StatusCode != http.StatusOK {
+							resp.Body.Close()
+							fmt.Println("Error:", fmt.Errorf("unexpected status code: %d", resp.StatusCode))
+							panic(1)
+						}
+
+						defer resp.Body.Close()
+
+						var response []map[string]interface{}
+						if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+							fmt.Println(err)
+							panic(1)
+						}
+
+						if len(response) == 0 {
+							time.Sleep(2 * time.Second)
+							continue
+						}
+
+						// Assuming only one email is expected, return the first one
+						if len(response) >= 1 {
+							// 型変換を行う
+							tempmail_io_inbox = make([]interface{}, len(response))
+							for i, v := range response {
+								tempmail_io_inbox[i] = v
+							}
+							break
+							// emailsスライスをループして、"認証コード"が含まれているかどうかをチェック
+							for _, emailBody := range response {
+								// map型であることを確認
+								if body, ok := emailBody["body"].(string); ok {
+									// 認証コードを含むかどうかを確認
+									if strings.Contains(body, "認証コード") {
+										fmt.Println("認証コードが含まれています")
+										tempmail_lol_inbox = make([]interface{}, len(response))
+										for i, v := range response {
+											tempmail_lol_inbox[i] = v
+										}
+										break
+									} else {
+										fmt.Println("認証コードが含まれていません")
+										time.Sleep(2 * time.Second)
+										continue
+									}
+								} else {
+									fmt.Println("メールの本文が文字列ではありません")
+								}
+							}
+						}
+					}
+				}
+
+				if tempmail == "m.kuku.lu" {
 					response, err := http.NewRequest("GET", fmt.Sprintf("https://m.kuku.lu/recv._ajax.php?&q=%s 【ABEMA】メールアドレス登録確認&csrf_token_check=%s", email, poipoi_token), nil)
 					if err != nil {
 						fmt.Println("Error:", err)
@@ -275,481 +457,310 @@ func main_thread(tempmail string, wg *sync.WaitGroup, resultChan chan<- []byte) 
 					response.AddCookie(cookieCsrf)
 					response.AddCookie(cookieSessionhash)
 
-					resp3, err := session.Do(response)
+					resp4, err := session.Do(response)
 					if err != nil {
 						fmt.Println("Error:", err)
 						panic(1)
 					}
 
-					defer resp3.Body.Close()
+					defer resp4.Body.Close()
 
-					doc, err := goquery.NewDocumentFromResponse(resp3)
+					doc, err := goquery.NewDocumentFromResponse(resp4)
 					if err != nil {
 						fmt.Println("Error parsing HTML:", err)
 						panic(1)
 					}
 
-					if doc.Find("span.view_listcnt").Text() == "1" {
-						//fmt.Println("m.kuku.lu PASSED!!!")
-						break
-					}
-					time.Sleep(2 * time.Second)
-				}
-			}
-			if tempmail == "tempmail.lol" {
-				//メールが存在するかのチェック、存在したらメールのデータをtempmail_lol_inboxに指定
-				for {
-					time.Sleep(1 * time.Second)
-					url := fmt.Sprintf("https://api.tempmail.lol/auth/%s", email_token)
-					req, err := http.NewRequest("GET", url, nil)
-					if err != nil {
-						panic(1)
-					}
+					mailElement := doc.Find("div.content-primary.main-content [style='z-index:99;']")
+					scriptElement := mailElement.Parent().Find("script").Eq(2).Text()
 
-					resp, err := session.Do(req)
-					if err != nil {
-						panic(1)
-					}
+					re := regexp.MustCompile(`'.*?'`)
+					parsedJavascript := re.FindAllString(scriptElement, -1)
+					if len(parsedJavascript) >= 3 {
+						num := strings.ReplaceAll(parsedJavascript[2], "'", "")
+						key := strings.ReplaceAll(parsedJavascript[3], "'", "")
 
-					if resp.StatusCode != http.StatusOK {
-						resp.Body.Close()
-						fmt.Println("Error:", fmt.Errorf("unexpected status code: %d", resp.StatusCode))
-						panic(1)
-					}
-
-					defer resp.Body.Close()
-
-					var response map[string]interface{}
-					if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-						panic(1)
-					}
-
-					emails, ok := response["email"].([]interface{})
-					if !ok || len(emails) == 0 {
-						time.Sleep(2 * time.Second)
-						continue
-					}
-					// Assuming only one email is expected, return the first one
-					if len(emails) >= 1 {
-						//fmt.Println(email, token)
-						//fmt.Println("tempmail.lol PASSED!!!")
-						tempmail_lol_inbox = emails
-						//fmt.Println(url)
-						break
-						// emailsスライスをループして、"認証コード"が含まれているかどうかをチェック
-						// emailsスライスをループして、"認証コード"が含まれているかどうかをチェック
-						// インターフェースの値を文字列にキャストし、"認証コード"が含まれているかどうかをチェック
-						// 各メールの本文について確認
-						// 各メールの本文について確認
-						//for _, emailBody := range emails {
-						//	// map型であることを確認
-						//	if emailMap, ok := emailBody.(map[string]interface{}); ok {
-						//		// "body"キーが存在するかどうかを確認
-						//		if body, ok := emailMap["body"].(string); ok {
-						//			// 認証コードを含むかどうかを確認
-						//			if strings.Contains(body, "認証コード") {
-						//				fmt.Println("認証コードが含まれています")
-						//				tempmail_lol_inbox = emails
-						//				break
-						//			} else {
-						//				fmt.Println("認証コードが含まれていません")
-						//				time.Sleep(2 * time.Second)
-						//				continue
-						//			}
-						//		} else {
-						//			fmt.Println("メールの本文が文字列ではありません")
-						//		}
-						//	} else {
-						//		fmt.Println("メールがmap[string]interface{}型ではありません")
-						//	}
-						//}
-					}
-				}
-			}
-			if tempmail == "tempmail.io" {
-				//メールが存在するかのチェック、存在したらメールのデータをtempmail_lol_inboxに指定
-				for {
-					time.Sleep(1 * time.Second)
-					url := fmt.Sprintf("https://api.internal.temp-mail.io/api/v3/email/%s/messages", email)
-					req, err := http.NewRequest("GET", url, nil)
-					if err != nil {
-						panic(1)
-					}
-
-					resp, err := session.Do(req)
-					if err != nil {
-						panic(1)
-					}
-
-					if resp.StatusCode != http.StatusOK {
-						resp.Body.Close()
-						fmt.Println("Error:", fmt.Errorf("unexpected status code: %d", resp.StatusCode))
-						panic(1)
-					}
-
-					defer resp.Body.Close()
-
-					var response []map[string]interface{}
-					if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-						fmt.Println(err)
-						panic(1)
-					}
-
-					if len(response) == 0 {
-						time.Sleep(2 * time.Second)
-						continue
-					}
-
-					// Assuming only one email is expected, return the first one
-					if len(response) >= 1 {
-						// 型変換を行う
-						tempmail_io_inbox = make([]interface{}, len(response))
-						for i, v := range response {
-							tempmail_io_inbox[i] = v
+						response2, err := http.NewRequest("GET", fmt.Sprintf("https://m.kuku.lu/smphone.app.recv.view.php?num=%s&key=%s", num, key), nil)
+						if err != nil {
+							fmt.Println("Error:", err)
+							panic(1)
 						}
-						break
-						// emailsスライスをループして、"認証コード"が含まれているかどうかをチェック
-						for _, emailBody := range response {
-							// map型であることを確認
-							if body, ok := emailBody["body"].(string); ok {
-								// 認証コードを含むかどうかを確認
-								if strings.Contains(body, "認証コード") {
-									fmt.Println("認証コードが含まれています")
-									tempmail_lol_inbox = make([]interface{}, len(response))
-									for i, v := range response {
-										tempmail_lol_inbox[i] = v
-									}
-									break
-								} else {
-									fmt.Println("認証コードが含まれていません")
-									time.Sleep(2 * time.Second)
-									continue
-								}
-							} else {
-								fmt.Println("メールの本文が文字列ではありません")
-							}
+
+						resp5, err := session.Do(response2)
+						if err != nil {
+							fmt.Println("Error:", err)
+							panic(1)
+						}
+
+						defer resp5.Body.Close()
+
+						doc, err = goquery.NewDocumentFromResponse(resp5)
+						if err != nil {
+							fmt.Println("Error parsing HTML:", err)
+							panic(1)
+						}
+						authCodeDiv := doc.Find("div:contains('認証コード:')")
+						if authCodeDiv.Length() > 0 {
+							text := authCodeDiv.Text()
+							verifyCode := strings.Split(text, ":") // 最後の要素を取得
+							verify_code = strings.TrimSpace(verifyCode[len(verifyCode)-1])
+						} else {
+							fmt.Println("認証コードが見つかりませんでした。")
+							panic(1)
 						}
 					}
 				}
-			}
 
-			if tempmail == "m.kuku.lu" {
-				response, err := http.NewRequest("GET", fmt.Sprintf("https://m.kuku.lu/recv._ajax.php?&q=%s 【ABEMA】メールアドレス登録確認&csrf_token_check=%s", email, poipoi_token), nil)
-				if err != nil {
-					fmt.Println("Error:", err)
-					panic(1)
-				}
+				if tempmail == "tempmail.lol" {
+					//fmt.Println(tempmail_lol_inbox)
+					// 正規表現パターンを定義
+					pattern := regexp.MustCompile(`認証コード: (\d+)`)
 
-				cookieCsrf := &http.Cookie{Name: "cookie_csrf_token", Value: poipoi_token}
-				cookieSessionhash := &http.Cookie{Name: "cookie_sessionhash", Value: poipoi_sessionhash}
-
-				response.AddCookie(cookieCsrf)
-				response.AddCookie(cookieSessionhash)
-
-				resp4, err := session.Do(response)
-				if err != nil {
-					fmt.Println("Error:", err)
-					panic(1)
-				}
-
-				defer resp4.Body.Close()
-
-				doc, err := goquery.NewDocumentFromResponse(resp4)
-				if err != nil {
-					fmt.Println("Error parsing HTML:", err)
-					panic(1)
-				}
-
-				mailElement := doc.Find("div.content-primary.main-content [style='z-index:99;']")
-				scriptElement := mailElement.Parent().Find("script").Eq(2).Text()
-
-				re := regexp.MustCompile(`'.*?'`)
-				parsedJavascript := re.FindAllString(scriptElement, -1)
-				if len(parsedJavascript) >= 3 {
-					num := strings.ReplaceAll(parsedJavascript[2], "'", "")
-					key := strings.ReplaceAll(parsedJavascript[3], "'", "")
-
-					response2, err := http.NewRequest("GET", fmt.Sprintf("https://m.kuku.lu/smphone.app.recv.view.php?num=%s&key=%s", num, key), nil)
-					if err != nil {
-						fmt.Println("Error:", err)
+					// データを文字列として取り出す
+					body, ok := tempmail_lol_inbox[0].(map[string]interface{})["body"].(string)
+					if !ok {
+						fmt.Println("メールが見つかりませんでした。")
 						panic(1)
 					}
 
-					resp5, err := session.Do(response2)
-					if err != nil {
-						fmt.Println("Error:", err)
-						panic(1)
-					}
-
-					defer resp5.Body.Close()
-
-					doc, err = goquery.NewDocumentFromResponse(resp5)
-					if err != nil {
-						fmt.Println("Error parsing HTML:", err)
-						panic(1)
-					}
-					authCodeDiv := doc.Find("div:contains('認証コード:')")
-					if authCodeDiv.Length() > 0 {
-						text := authCodeDiv.Text()
-						verifyCode := strings.Split(text, ":") // 最後の要素を取得
-						verify_code = strings.TrimSpace(verifyCode[len(verifyCode)-1])
-					} else {
+					// 正規表現で認証コードを検索
+					match := pattern.FindStringSubmatch(body)
+					if len(match) < 2 {
+						fmt.Println(tempmail_lol_inbox[0])
 						fmt.Println("認証コードが見つかりませんでした。")
 						panic(1)
 					}
+
+					// 認証コードを出力
+					//fmt.Println("認証コード:", match[1])
+					// How to Get verify_code
+					verify_code = match[1]
+					//fmt.Println(verify_code)
 				}
-			}
+				if tempmail == "tempmail.io" {
+					// デバッグ用に tempmail_io_inbox の内容を出力
+					//fmt.Println("tempmail_io_inbox:", tempmail_io_inbox)
 
-			if tempmail == "tempmail.lol" {
-				//fmt.Println(tempmail_lol_inbox)
-				// 正規表現パターンを定義
-				pattern := regexp.MustCompile(`認証コード: (\d+)`)
-
-				// データを文字列として取り出す
-				body, ok := tempmail_lol_inbox[0].(map[string]interface{})["body"].(string)
-				if !ok {
-					fmt.Println("メールが見つかりませんでした。")
-					panic(1)
-				}
-
-				// 正規表現で認証コードを検索
-				match := pattern.FindStringSubmatch(body)
-				if len(match) < 2 {
-					fmt.Println(tempmail_lol_inbox[0])
-					fmt.Println("認証コードが見つかりませんでした。")
-					panic(1)
-				}
-
-				// 認証コードを出力
-				//fmt.Println("認証コード:", match[1])
-				// How to Get verify_code
-				verify_code = match[1]
-				//fmt.Println(verify_code)
-			}
-			if tempmail == "tempmail.io" {
-				// デバッグ用に tempmail_io_inbox の内容を出力
-				//fmt.Println("tempmail_io_inbox:", tempmail_io_inbox)
-
-				// tempmail_io_inbox[0] が map[string]interface{} 型であるか確認
-				emailData, ok := tempmail_io_inbox[0].(map[string]interface{})
-				if !ok {
-					//fmt.Println("tempmail_io_inbox[0] が map[string]interface{} 型ではありません。")
-					panic(1)
-				}
-
-				// "body_text" フィールドが存在し、文字列型であるか確認
-				body, ok := emailData["body_text"].(string)
-				if !ok {
-					//fmt.Println("tempmail_io_inbox[0] に 'body_text' フィールドが存在しないか、文字列型ではありません。")
-					//fmt.Println("tempmail_io_inbox[0]:", emailData)
-					panic(1)
-				}
-
-				// 正規表現パターンを定義
-				pattern := regexp.MustCompile(`認証コード: (\d+)`)
-
-				// 正規表現で認証コードを検索
-				match := pattern.FindStringSubmatch(body)
-				if len(match) < 2 {
-					//fmt.Println("body:", body)
-					//fmt.Println("認証コードが見つかりませんでした。")
-					panic(1)
-				}
-
-				// 認証コードを出力
-				verify_code = match[1]
-				//fmt.Println("認証コード:", verify_code)
-
-			}
-
-			jsonData3 := map[string]interface{}{
-				"token": verify_code,
-			}
-			jsonBytes3, err := json.Marshal(jsonData3)
-			if err != nil {
-				fmt.Println("Error encoding JSON data:", err)
-				panic(1)
-			}
-
-			req5, err := http.NewRequest("POST", fmt.Sprintf("https://api.p-c3-e.abema-tv.com/v1/users/%s/tokens/email", userID), bytes.NewBuffer(jsonBytes3))
-			if err != nil {
-				fmt.Println("Error verifying email:", err)
-				panic(1)
-			}
-
-			req5.Header.Set("Authorization", "bearer "+abema_token)
-			req5.Header.Set("Content-Type", "application/json")
-
-			resp6, err := session.Do(req5)
-			if err != nil {
-				fmt.Println("Error sending request:", err)
-				panic(1)
-			}
-			defer resp6.Body.Close()
-
-			//fmt.Println(resp6.StatusCode)
-
-			if resp6.StatusCode == http.StatusOK {
-				fmt.Println("NyaGenV2 - "+Magenta+"[VERIFY..]"+Reset+"      VerifyCode -> ", verify_code, "                        Status -> ", resp1.StatusCode)
-			}
-
-			setPasswordJSON := map[string]interface{}{
-				"token":           verify_code,
-				"password":        password,
-				"skippedPassword": false,
-			}
-			setPasswordJSONBytes, _ := json.Marshal(setPasswordJSON)
-			setPasswordURL := fmt.Sprintf("https://api.p-c3-e.abema-tv.com/v1/users/%s/tokens/email/r", userID)
-			//fmt.Println(setPasswordURL)
-			setPasswordReq, err := http.NewRequest("PUT", setPasswordURL, bytes.NewBuffer(setPasswordJSONBytes))
-			if err != nil {
-				fmt.Println("Error verifying email:", err)
-				panic(1)
-			}
-			setPasswordReq.Header.Set("Authorization", "bearer "+abema_token)
-			setPasswordReq.Header.Set("Content-Type", "application/json")
-
-			setPasswordResponse, err := session.Do(setPasswordReq)
-			if err != nil {
-				fmt.Println("Error sending request:", err)
-				panic(1)
-			}
-
-			defer setPasswordResponse.Body.Close()
-
-			//fmt.Println(setPasswordResponse.StatusCode, setPasswordURL, abema_token, userID)
-
-			if setPasswordResponse.StatusCode == http.StatusOK {
-				jsonData4 := map[string]interface{}{
-					"token": premium_token,
-				}
-				jsonBytes4, err := json.Marshal(jsonData4)
-				if err != nil {
-					fmt.Println("Error encoding JSON data:", err)
-					panic(1)
-				}
-
-				req6, err := http.NewRequest("POST", fmt.Sprintf("https://api.p-c3-e.abema-tv.com/v1/users/%s/payments/credit", userID), bytes.NewBuffer(jsonBytes4))
-				if err != nil {
-					fmt.Println("Error verifying email:", err)
-					panic(1)
-				}
-
-				req6.Header.Set("Authorization", "bearer "+abema_token)
-				req6.Header.Set("Content-Type", "application/json")
-
-				resp7, err := session.Do(req6)
-				if err != nil {
-					fmt.Println("Error sending request:", err)
-					panic(1)
-				}
-				defer resp7.Body.Close()
-
-				jsonData5 := map[string]interface{}{
-					"code":      "",
-					"productId": "subscription_premium",
-				}
-				jsonBytes5, err := json.Marshal(jsonData5)
-				if err != nil {
-					fmt.Println("Error encoding JSON data:", err)
-					panic(1)
-				}
-
-				req7, err := http.NewRequest("POST", fmt.Sprintf("https://api.p-c3-e.abema-tv.com/v1/users/%s/subscriptions/credit", userID), bytes.NewBuffer(jsonBytes5))
-				if err != nil {
-					fmt.Println("Error verifying email:", err)
-					panic(1)
-				}
-
-				req7.Header.Set("Authorization", "bearer "+abema_token)
-				req7.Header.Set("Content-Type", "application/json")
-
-				resp8, err := session.Do(req7)
-				if err != nil {
-					fmt.Println("Error sending request:", err)
-					panic(1)
-				}
-				defer resp8.Body.Close()
-
-				if resp8.StatusCode == http.StatusOK {
-					unsubscriptionJSON := map[string]interface{}{
-						"productId": "subscription_premium",
+					// tempmail_io_inbox[0] が map[string]interface{} 型であるか確認
+					emailData, ok := tempmail_io_inbox[0].(map[string]interface{})
+					if !ok {
+						//fmt.Println("tempmail_io_inbox[0] が map[string]interface{} 型ではありません。")
+						panic(1)
 					}
-					unsubscriptionJSONBytes, _ := json.Marshal(unsubscriptionJSON)
-					unsubscriptionURL := fmt.Sprintf("https://api.p-c3-e.abema-tv.com/v1/users/%s/subscriptions/credit/cancel", userID)
-					unsubscriptionReq, err := http.NewRequest("POST", unsubscriptionURL, bytes.NewBuffer(unsubscriptionJSONBytes))
+
+					// "body_text" フィールドが存在し、文字列型であるか確認
+					body, ok := emailData["body_text"].(string)
+					if !ok {
+						//fmt.Println("tempmail_io_inbox[0] に 'body_text' フィールドが存在しないか、文字列型ではありません。")
+						//fmt.Println("tempmail_io_inbox[0]:", emailData)
+						panic(1)
+					}
+
+					// 正規表現パターンを定義
+					pattern := regexp.MustCompile(`認証コード: (\d+)`)
+
+					// 正規表現で認証コードを検索
+					match := pattern.FindStringSubmatch(body)
+					if len(match) < 2 {
+						//fmt.Println("body:", body)
+						//fmt.Println("認証コードが見つかりませんでした。")
+						panic(1)
+					}
+
+					// 認証コードを出力
+					verify_code = match[1]
+					//fmt.Println("認証コード:", verify_code)
+
+				}
+
+				jsonData3 := map[string]interface{}{
+					"token": verify_code,
+				}
+				jsonBytes3, err := json.Marshal(jsonData3)
+				if err != nil {
+					fmt.Println("Error encoding JSON data:", err)
+					panic(1)
+				}
+
+				req5, err := http.NewRequest("POST", fmt.Sprintf("https://api.p-c3-e.abema-tv.com/v1/users/%s/tokens/email", userID), bytes.NewBuffer(jsonBytes3))
+				if err != nil {
+					fmt.Println("Error verifying email:", err)
+					panic(1)
+				}
+
+				req5.Header.Set("Authorization", "bearer "+abema_token)
+				req5.Header.Set("Content-Type", "application/json")
+
+				resp6, err := session.Do(req5)
+				if err != nil {
+					fmt.Println("Error sending request:", err)
+					panic(1)
+				}
+				defer resp6.Body.Close()
+
+				//fmt.Println(resp6.StatusCode)
+
+				if resp6.StatusCode == http.StatusOK {
+					fmt.Println("NyaGenV2 - "+Magenta+"[VERIFY..]"+Reset+"      VerifyCode -> ", verify_code, "                        Status -> ", resp1.StatusCode)
+				}
+
+				setPasswordJSON := map[string]interface{}{
+					"token":           verify_code,
+					"password":        password,
+					"skippedPassword": false,
+				}
+				setPasswordJSONBytes, _ := json.Marshal(setPasswordJSON)
+				setPasswordURL := fmt.Sprintf("https://api.p-c3-e.abema-tv.com/v1/users/%s/tokens/email/r", userID)
+				//fmt.Println(setPasswordURL)
+				setPasswordReq, err := http.NewRequest("PUT", setPasswordURL, bytes.NewBuffer(setPasswordJSONBytes))
+				if err != nil {
+					fmt.Println("Error verifying email:", err)
+					panic(1)
+				}
+				setPasswordReq.Header.Set("Authorization", "bearer "+abema_token)
+				setPasswordReq.Header.Set("Content-Type", "application/json")
+
+				setPasswordResponse, err := session.Do(setPasswordReq)
+				if err != nil {
+					fmt.Println("Error sending request:", err)
+					panic(1)
+				}
+
+				defer setPasswordResponse.Body.Close()
+
+				//fmt.Println(setPasswordResponse.StatusCode, setPasswordURL, abema_token, userID)
+
+				if setPasswordResponse.StatusCode == http.StatusOK {
+					jsonData4 := map[string]interface{}{
+						"token": premium_token,
+					}
+					jsonBytes4, err := json.Marshal(jsonData4)
+					if err != nil {
+						fmt.Println("Error encoding JSON data:", err)
+						panic(1)
+					}
+
+					req6, err := http.NewRequest("POST", fmt.Sprintf("https://api.p-c3-e.abema-tv.com/v1/users/%s/payments/credit", userID), bytes.NewBuffer(jsonBytes4))
 					if err != nil {
 						fmt.Println("Error verifying email:", err)
 						panic(1)
 					}
-					unsubscriptionReq.Header.Set("Authorization", "bearer "+abema_token)
-					unsubscriptionReq.Header.Set("Content-Type", "application/json")
-					unsubscriptionResponse, err := session.Do(unsubscriptionReq)
+
+					req6.Header.Set("Authorization", "bearer "+abema_token)
+					req6.Header.Set("Content-Type", "application/json")
+
+					resp7, err := session.Do(req6)
 					if err != nil {
 						fmt.Println("Error sending request:", err)
 						panic(1)
 					}
-					defer unsubscriptionResponse.Body.Close()
+					defer resp7.Body.Close()
 
-					byteArray, err := ioutil.ReadAll(unsubscriptionReq.Body)
-					if err != nil {
-						fmt.Println(err)
+					jsonData5 := map[string]interface{}{
+						"code":      "",
+						"productId": "subscription_premium",
 					}
-					bytes := []byte(byteArray)
-					err = json.Unmarshal(bytes, &response)
-					//fmt.Println(response)
+					jsonBytes5, err := json.Marshal(jsonData5)
+					if err != nil {
+						fmt.Println("Error encoding JSON data:", err)
+						panic(1)
+					}
 
-					if unsubscriptionResponse.StatusCode == http.StatusOK {
-						end_time := time.Since(s)
-						ended_time := end_time.Seconds()
-						//fmt.Println(unsubscriptionResponse.Body)
-						fmt.Println("NyaGenV2 - "+Green+"[UNLOCK..]"+Reset+"        Password -> ", password, "                        Mail -> ", email, " Time -> ", fmt.Sprintf("%.2f秒", ended_time), " UserID -> ", userID)
+					req7, err := http.NewRequest("POST", fmt.Sprintf("https://api.p-c3-e.abema-tv.com/v1/users/%s/subscriptions/credit", userID), bytes.NewBuffer(jsonBytes5))
+					if err != nil {
+						fmt.Println("Error verifying email:", err)
+						panic(1)
+					}
 
-						file, err := os.OpenFile("abema-account.txt", os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
-						if err != nil {
-							//エラー処理
-							log.Fatal(err)
+					req7.Header.Set("Authorization", "bearer "+abema_token)
+					req7.Header.Set("Content-Type", "application/json")
+
+					resp8, err := session.Do(req7)
+					if err != nil {
+						fmt.Println("Error sending request:", err)
+						panic(1)
+					}
+					defer resp8.Body.Close()
+
+					if resp8.StatusCode == http.StatusOK {
+						unsubscriptionJSON := map[string]interface{}{
+							"productId": "subscription_premium",
 						}
-						defer file.Close()
-						fmt.Fprintln(file, fmt.Sprintf("%s@%s", email, password)) //書き込み
-						data := map[string]interface{}{
-							"result": "success",
-							"code":   "200",
-							"response": map[string]interface{}{
-								"email":    email,
-								"password": password,
-								"userid":   userID,
-								"time":     time.Since(s).String(),
-							},
-						}
-						encode_response, err := json.Marshal(data)
+						unsubscriptionJSONBytes, _ := json.Marshal(unsubscriptionJSON)
+						unsubscriptionURL := fmt.Sprintf("https://api.p-c3-e.abema-tv.com/v1/users/%s/subscriptions/credit/cancel", userID)
+						unsubscriptionReq, err := http.NewRequest("POST", unsubscriptionURL, bytes.NewBuffer(unsubscriptionJSONBytes))
 						if err != nil {
-							fmt.Printf("could not marshal json: %s\n", err)
+							fmt.Println("Error verifying email:", err)
 							panic(1)
 						}
-						result := []byte(encode_response)
-						resultChan <- result
+						unsubscriptionReq.Header.Set("Authorization", "bearer "+abema_token)
+						unsubscriptionReq.Header.Set("Content-Type", "application/json")
+						unsubscriptionResponse, err := session.Do(unsubscriptionReq)
+						if err != nil {
+							fmt.Println("Error sending request:", err)
+							panic(1)
+						}
+						defer unsubscriptionResponse.Body.Close()
+
+						byteArray, err := ioutil.ReadAll(unsubscriptionReq.Body)
+						if err != nil {
+							fmt.Println(err)
+						}
+						bytes := []byte(byteArray)
+						err = json.Unmarshal(bytes, &response)
+						//fmt.Println(response)
+
+						if unsubscriptionResponse.StatusCode == http.StatusOK {
+							end_time := time.Since(s)
+							ended_time := end_time.Seconds()
+							//fmt.Println(unsubscriptionResponse.Body)
+							fmt.Println("NyaGenV2 - "+Green+"[UNLOCK..]"+Reset+"        Password -> ", password, "                        Mail -> ", email, " Time -> ", fmt.Sprintf("%.2f秒", ended_time), " UserID -> ", userID)
+
+							file, err := os.OpenFile("abema-account.txt", os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
+							if err != nil {
+								//エラー処理
+								log.Fatal(err)
+							}
+							defer file.Close()
+							fmt.Fprintln(file, fmt.Sprintf("%s@%s", email, password)) //書き込み
+							data := map[string]interface{}{
+								"result": "success",
+								"code":   "200",
+								"response": map[string]interface{}{
+									"email":    email,
+									"password": password,
+									"userid":   userID,
+									"time":     time.Since(s).String(),
+								},
+							}
+							encode_response, err := json.Marshal(data)
+							if err != nil {
+								fmt.Printf("could not marshal json: %s\n", err)
+								panic(1)
+							}
+							result := []byte(encode_response)
+							resultChan <- result
+						} else {
+							fmt.Println("トライアル解除に失敗しました。")
+							panic(1)
+						}
 					} else {
-						fmt.Println("トライアル解除に失敗しました。")
+						fmt.Println("プレミアムプランの適応に失敗しました")
 						panic(1)
 					}
 				} else {
-					fmt.Println("プレミアムプランの適応に失敗しました")
+					fmt.Println("パスワードの設定に失敗しました。")
 					panic(1)
 				}
 			} else {
-				fmt.Println("パスワードの設定に失敗しました。")
+				fmt.Println("認証メールの送信に失敗しました。")
 				panic(1)
 			}
 		} else {
-			fmt.Println("認証メールの送信に失敗しました。")
+			fmt.Println("ユーザーの取得に失敗しました。")
 			panic(1)
 		}
-	} else {
-		fmt.Println("ユーザーの取得に失敗しました。")
-		panic(1)
 	}
-
 }
 
 func gen_email(tempmail string, session *http.Client, poipoi_token string, poipoi_sessionhash string) (string, string, error) {
@@ -885,61 +896,29 @@ func gen_email(tempmail string, session *http.Client, poipoi_token string, poipo
 
 func gen_payment_url() string {
 	vm := otto.New()
-
-	// JavaScriptファイルを読み込む
-	jsLib, err := ioutil.ReadFile("payment.min.v2.3.js")
-	if err != nil {
-		fmt.Println("JavaScriptファイルの読み込みに失敗しました:", err)
-		panic(1)
-	}
-
-	// JavaScriptコードを定義
-	jsCode := `
-		var cardobj = {
-			"cardno": "{{CARDNO}}",
-			"expire": "{{EXPIRE}}",
-			"securitycode": "{{SECURITYCODE}}",
-			"holdername": "{{HOLDERNAME}}"
-		};
-		Multipayment.init("9100763125609");
-		var payment_url = Multipayment.getToken(cardobj, "onReceiveToken");
-		payment_url;
-	`
-
-	// 変更したい値
-	cardno := config.Payment.Cc_number
-	expire := config.Payment.Cc_exp_year + config.Payment.Cc_exp_month
-	securitycode := config.Payment.Cc_cvv
-	holdername := config.Payment.Cc_name
-
-	// JavaScriptコード内のプレースホルダを置換
-	jsCode = replacePlaceholder(jsCode, "{{CARDNO}}", cardno)
-	jsCode = replacePlaceholder(jsCode, "{{EXPIRE}}", expire)
-	jsCode = replacePlaceholder(jsCode, "{{SECURITYCODE}}", securitycode)
-	jsCode = replacePlaceholder(jsCode, "{{HOLDERNAME}}", holdername)
-
-	// JavaScriptファイルとコードを結合
-	fullJsCode := string(jsLib) + "\n" + jsCode
-
-	// JavaScriptコードをコンパイルして実行
-	script, err := vm.Compile("combined.js", fullJsCode)
+	card_obj := config.Payment.Cc_number + "|" + config.Payment.Cc_exp_year + config.Payment.Cc_exp_month + "|" + config.Payment.Cc_cvv + "|" + config.Payment.Cc_name + "|"
+	vm.Set("cardobj", card_obj)
+	script, err := vm.Compile("payment.min.v2.4.js", nil)
 	if err != nil {
 		fmt.Println(err)
 		panic(1)
 	}
 	value, err := vm.Run(script)
 	if err != nil {
-		fmt.Println(err)
-		panic(1)
+		fmt.Println(value)
 	}
-	valueStr, err := value.ToString()
-	if err != nil {
-		fmt.Println("URLの変換に失敗しました:", err)
-		panic(1)
-	}
+	if value, err := vm.Get("payment_url"); err == nil {
 
-	//fmt.Println("Payment URL:", valueStr)
-	return valueStr
+		valueStr, err := value.ToString()
+		if err != nil {
+			fmt.Println("URLの変換に失敗しました:", err)
+			panic(1)
+		}
+		return valueStr
+	} else {
+		panic("failed to get payment_url")
+	}
+	return ""
 }
 
 // プレースホルダを置換するヘルパー関数
@@ -963,7 +942,7 @@ func gen_token(paymenturl string) (string, error) {
 
 	// レスポンスボディの一部を抽出してJSON文字列を取得
 	jsonStr := string(body)
-	jsonStr = strings.TrimPrefix(jsonStr, "onReceiveToken(")
+	jsonStr = strings.TrimPrefix(jsonStr, "onNyaGenV2(")
 	jsonStr = strings.TrimSuffix(jsonStr, ")")
 
 	// JSON文字列をパースしてtokenを取り出す
@@ -1026,5 +1005,4 @@ func generate_applicationkeysecret(deviceid string) string {
 		tmp = mac.Sum(nil)
 	}
 	return base64.RawURLEncoding.EncodeToString(tmp)
-
 }
