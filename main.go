@@ -49,13 +49,13 @@ type Config struct {
 type GeneralConfig struct {
 	Threads int     `toml:"threads"`
 	Debug   bool    `toml:"debug"`
-	Delay   float64 `toml:"delay"` // 秒単位での遅延時間
+	Delay   float64 `toml:"delay"`
 }
 
 type TempmailConfig struct {
 	Service            string `toml:"service"`
 	Poipoi_token       string `toml:"poipoi_token"`
-	Poipoi_sessionhash string `toml:"poipoi_sessionhash"` // 秒単位での遅延時間
+	Poipoi_sessionhash string `toml:"poipoi_sessionhash"`
 }
 
 type PaymentConfig struct {
@@ -134,8 +134,15 @@ func main() {
 	// 結果を受け取り、表示するゴルーチン
 	go func() {
 		for result := range resultChan {
-			//fmt.Println(string(result))
 			result = result
+			// ここのコードを見つけた君！よくやったな！
+			// もちろんこのコードは使われていない、消すのめんどくさいから=で無理やりエラーを回避
+			// これ消すのに何分かかるんだか...
+
+			// 消し方:
+			// func main_thread()の引用のresultChanを削除
+			// ここの go func() {}の部分を丸々削除
+			// これでクソコードは消えます
 		}
 	}()
 
