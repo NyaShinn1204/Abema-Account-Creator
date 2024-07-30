@@ -184,8 +184,6 @@ func main_thread(ctx context.Context, tempmail string, wg *sync.WaitGroup, resul
 				poipoi_sessionhash = config.Tempmail.Poipoi_sessionhash
 			}
 		}
-		//tempmail := "m.kuku.lu"
-		//tempmail := "tempmail.lol"
 		session := &http.Client{Timeout: time.Duration(10 * time.Second), Jar: jar}
 		password := "password"
 		accountUUID := uuid.New()
@@ -196,13 +194,9 @@ func main_thread(ctx context.Context, tempmail string, wg *sync.WaitGroup, resul
 			fmt.Println("Error:", err)
 			panic(err)
 		}
-		//fmt.Println(password, accountUUID, applicationKeySecret, email_token)
-		//gen_test()
+
 		payment_url := gen_payment_url()
 		premium_token, err := gen_token(payment_url)
-
-		//fmt.Println(email, email_token)
-		//fmt.Println(password, accountUUID, applicationKeySecret, email, email_token, premium_token)
 
 		jsonData1 := map[string]string{
 			"deviceId":             accountUUID.String(),
@@ -248,7 +242,6 @@ func main_thread(ctx context.Context, tempmail string, wg *sync.WaitGroup, resul
 			}
 
 			fmt.Println("NyaGenV2 - "+Magenta+"[GETTED..]"+Reset+"          UserID -> ", userID, "                Status -> ", resp1.StatusCode)
-			//fmt.Println(email, password, accUUID, applicationKeySecret)
 
 			jsonData2 := map[string]interface{}{
 				"email": email,
@@ -274,8 +267,6 @@ func main_thread(ctx context.Context, tempmail string, wg *sync.WaitGroup, resul
 				panic(1)
 			}
 			defer resp2.Body.Close()
-
-			//fmt.Println(email)
 
 			if resp2.StatusCode == http.StatusAccepted {
 
@@ -520,7 +511,6 @@ func main_thread(ctx context.Context, tempmail string, wg *sync.WaitGroup, resul
 				}
 
 				if tempmail == "tempmail.lol" {
-					//fmt.Println(tempmail_lol_inbox)
 					// 正規表現パターンを定義
 					pattern := regexp.MustCompile(`認証コード: (\d+)`)
 
@@ -538,17 +528,9 @@ func main_thread(ctx context.Context, tempmail string, wg *sync.WaitGroup, resul
 						fmt.Println("認証コードが見つかりませんでした。")
 						panic(1)
 					}
-
-					// 認証コードを出力
-					//fmt.Println("認証コード:", match[1])
-					// How to Get verify_code
 					verify_code = match[1]
-					//fmt.Println(verify_code)
 				}
 				if tempmail == "tempmail.io" {
-					// デバッグ用に tempmail_io_inbox の内容を出力
-					//fmt.Println("tempmail_io_inbox:", tempmail_io_inbox)
-
 					// tempmail_io_inbox[0] が map[string]interface{} 型であるか確認
 					emailData, ok := tempmail_io_inbox[0].(map[string]interface{})
 					if !ok {
@@ -559,8 +541,6 @@ func main_thread(ctx context.Context, tempmail string, wg *sync.WaitGroup, resul
 					// "body_text" フィールドが存在し、文字列型であるか確認
 					body, ok := emailData["body_text"].(string)
 					if !ok {
-						//fmt.Println("tempmail_io_inbox[0] に 'body_text' フィールドが存在しないか、文字列型ではありません。")
-						//fmt.Println("tempmail_io_inbox[0]:", emailData)
 						panic(1)
 					}
 
@@ -570,15 +550,11 @@ func main_thread(ctx context.Context, tempmail string, wg *sync.WaitGroup, resul
 					// 正規表現で認証コードを検索
 					match := pattern.FindStringSubmatch(body)
 					if len(match) < 2 {
-						//fmt.Println("body:", body)
-						//fmt.Println("認証コードが見つかりませんでした。")
 						panic(1)
 					}
 
 					// 認証コードを出力
 					verify_code = match[1]
-					//fmt.Println("認証コード:", verify_code)
-
 				}
 
 				jsonData3 := map[string]interface{}{
@@ -605,8 +581,6 @@ func main_thread(ctx context.Context, tempmail string, wg *sync.WaitGroup, resul
 					panic(1)
 				}
 				defer resp6.Body.Close()
-
-				//fmt.Println(resp6.StatusCode)
 
 				if resp6.StatusCode == http.StatusOK {
 					fmt.Println("NyaGenV2 - "+Magenta+"[VERIFY..]"+Reset+"      VerifyCode -> ", verify_code, "                        Status -> ", resp1.StatusCode)
@@ -635,8 +609,6 @@ func main_thread(ctx context.Context, tempmail string, wg *sync.WaitGroup, resul
 				}
 
 				defer setPasswordResponse.Body.Close()
-
-				//fmt.Println(setPasswordResponse.StatusCode, setPasswordURL, abema_token, userID)
 
 				if setPasswordResponse.StatusCode == http.StatusOK {
 					jsonData4 := map[string]interface{}{
@@ -716,12 +688,10 @@ func main_thread(ctx context.Context, tempmail string, wg *sync.WaitGroup, resul
 						}
 						bytes := []byte(byteArray)
 						err = json.Unmarshal(bytes, &response)
-						//fmt.Println(response)
 
 						if unsubscriptionResponse.StatusCode == http.StatusOK {
 							end_time := time.Since(s)
 							ended_time := end_time.Seconds()
-							//fmt.Println(unsubscriptionResponse.Body)
 							fmt.Println("NyaGenV2 - "+Green+"[UNLOCK..]"+Reset+"        Password -> ", password, "                        Mail -> ", email, " Time -> ", fmt.Sprintf("%.2f秒", ended_time), " UserID -> ", userID)
 
 							file, err := os.OpenFile("abema-account.txt", os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
