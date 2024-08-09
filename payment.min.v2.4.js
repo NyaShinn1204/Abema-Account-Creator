@@ -58,7 +58,7 @@ var CryptoJS = CryptoJS || function (t, e) {
       create: function () {
         var t = this.extend();
         return t.init.apply(t, arguments),
-          t
+        t
       },
       init: function () { },
       mixIn: function (t) {
@@ -73,7 +73,7 @@ var CryptoJS = CryptoJS || function (t, e) {
     , o = r.WordArray = s.extend({
       init: function (t, i) {
         t = this.words = t || [],
-          this.sigBytes = i != e ? i : 4 * t.length
+        this.sigBytes = i != e ? i : 4 * t.length
       },
       toString: function (t) {
         return (t || h).stringify(this)
@@ -99,12 +99,12 @@ var CryptoJS = CryptoJS || function (t, e) {
         var e = this.words
           , i = this.sigBytes;
         e[i >>> 2] &= 4294967295 << 32 - 8 * (i % 4),
-          e.length = t.ceil(i / 4)
+        e.length = t.ceil(i / 4)
       },
       clone: function () {
         var t = s.clone.call(this);
         return t.words = this.words.slice(0),
-          t
+        t
       },
       random: function (e) {
         for (var i = [], r = 0; r < e; r += 4)
@@ -120,7 +120,7 @@ var CryptoJS = CryptoJS || function (t, e) {
         for (var i = [], r = 0; r < t; r++) {
           var n = e[r >>> 2] >>> 24 - 8 * (r % 4) & 255;
           i.push((n >>> 4).toString(16)),
-            i.push((15 & n).toString(16))
+          i.push((15 & n).toString(16))
         }
         return i.join("")
       }
@@ -140,12 +140,12 @@ var CryptoJS = CryptoJS || function (t, e) {
     , f = r.BufferedBlockAlgorithm = s.extend({
       reset: function () {
         this._data = new o.init,
-          this._nDataBytes = 0
+        this._nDataBytes = 0
       },
       _append: function (t) {
         "string" == typeof t && (t = u.parse(t)),
-          this._data.concat(t),
-          this._nDataBytes += t.sigBytes
+        this._data.concat(t),
+        this._nDataBytes += t.sigBytes
       },
       _process: function (e) {
         var i = this._data
@@ -160,7 +160,7 @@ var CryptoJS = CryptoJS || function (t, e) {
           for (var h = 0; h < e; h += s)
             this._doProcessBlock(r, h);
           h = r.splice(0, e),
-            i.sigBytes -= n
+          i.sigBytes -= n
         }
         return new o.init(h, n)
       },
@@ -170,20 +170,20 @@ var CryptoJS = CryptoJS || function (t, e) {
     cfg: s.extend(),
     init: function (t) {
       this.cfg = this.cfg.extend(t),
-        this.reset()
+      this.reset()
     },
     reset: function () {
       f.reset.call(this),
-        this._doReset()
+      this._doReset()
     },
     update: function (t) {
       return this._append(t),
-        this._process(),
-        this
+      this._process(),
+      this
     },
     finalize: function (t) {
       return t && this._append(t),
-        this._doFinalize()
+      this._doFinalize()
     },
     blockSize: 16,
     _createHelper: function (t) {
@@ -193,7 +193,7 @@ var CryptoJS = CryptoJS || function (t, e) {
     },
     _createHmacHelper: function (t) { }
   });
-  var l = i.algo = {};
+  i.algo = {};
   return i
 }(Math);
 !function () {
@@ -204,7 +204,7 @@ var CryptoJS = CryptoJS || function (t, e) {
         , i = t.sigBytes
         , r = this._map;
       t.clamp(),
-        t = [];
+      t = [];
       for (var n = 0; n < i; n += 3)
         for (var s = (e[n >>> 2] >>> 24 - 8 * (n % 4) & 255) << 16 | (e[n + 1 >>> 2] >>> 24 - 8 * ((n + 1) % 4) & 255) << 8 | e[n + 2 >>> 2] >>> 24 - 8 * ((n + 2) % 4) & 255, o = 0; 4 > o && n + .75 * o < i; o++)
           t.push(r.charAt(s >>> 6 * (3 - o) & 63));
@@ -230,17 +230,17 @@ var CryptoJS = CryptoJS || function (t, e) {
         },
         init: function (t, e, i) {
           this.cfg = this.cfg.extend(i),
-            this._xformMode = t,
-            this._key = e,
-            this.reset()
+          this._xformMode = t,
+          this._key = e,
+          this.reset()
         },
         reset: function () {
           s.reset.call(this),
-            this._doReset()
+          this._doReset()
         },
         finalize: function (t) {
           return t && this._append(t),
-            this._doFinalize()
+          this._doFinalize()
         },
         keySize: 4,
         ivSize: 4,
@@ -270,7 +270,7 @@ var CryptoJS = CryptoJS || function (t, e) {
         },
         init: function (t, e) {
           this._cipher = t,
-            this._iv = e
+          this._iv = e
         }
       })).extend();
     f.Encryptor = f.extend({
@@ -288,7 +288,7 @@ var CryptoJS = CryptoJS || function (t, e) {
           for (var i = 4 * e, i = i - t.sigBytes % i, r = i << 24 | i << 16 | i << 8 | i, s = [], o = 0; o < i; o += 4)
             s.push(r);
           i = n.create(s, i),
-            t.concat(i)
+          t.concat(i)
         }
       },
       i.BlockCipher = h.extend({
@@ -305,7 +305,7 @@ var CryptoJS = CryptoJS || function (t, e) {
             var i = t.createEncryptor;
           else
             i = t.createDecryptor,
-              this._minBufferSize = 1;
+            this._minBufferSize = 1;
           this._mode = i.call(t, this, e && e.words)
         },
         _doProcessBlock: function (t, e) {
@@ -318,7 +318,7 @@ var CryptoJS = CryptoJS || function (t, e) {
             var e = this._process(!0)
           } else
             e = this._process(!0),
-              t.unpad(e);
+            t.unpad(e);
           return e
         },
         blockSize: 4
@@ -405,8 +405,8 @@ var CryptoJS = CryptoJS || function (t, e) {
           for (e = this._invKeySchedule = [],
             i = 0; i < t; i++)
             s = t - i,
-              o = i % 4 ? n[s] : n[s - 4],
-              e[i] = 4 > i || 4 >= s ? o : c[r[o >>> 24]] ^ u[r[o >>> 16 & 255]] ^ f[r[o >>> 8 & 255]] ^ l[r[255 & o]]
+            o = i % 4 ? n[s] : n[s - 4],
+            e[i] = 4 > i || 4 >= s ? o : c[r[o >>> 24]] ^ u[r[o >>> 16 & 255]] ^ f[r[o >>> 8 & 255]] ^ l[r[255 & o]]
         },
         encryptBlock: function (t, e) {
           this._doCryptBlock(t, e, this._keySchedule, s, o, a, h, r)
@@ -421,13 +421,13 @@ var CryptoJS = CryptoJS || function (t, e) {
               , u = y
               , f = v;
           g = (a[c >>> 24] << 24 | a[u >>> 16 & 255] << 16 | a[f >>> 8 & 255] << 8 | a[255 & l]) ^ i[p++],
-            y = (a[u >>> 24] << 24 | a[f >>> 16 & 255] << 16 | a[l >>> 8 & 255] << 8 | a[255 & c]) ^ i[p++],
-            v = (a[f >>> 24] << 24 | a[l >>> 16 & 255] << 16 | a[c >>> 8 & 255] << 8 | a[255 & u]) ^ i[p++],
-            l = (a[l >>> 24] << 24 | a[c >>> 16 & 255] << 16 | a[u >>> 8 & 255] << 8 | a[255 & f]) ^ i[p++],
-            t[e] = g,
-            t[e + 1] = y,
-            t[e + 2] = v,
-            t[e + 3] = l
+          y = (a[u >>> 24] << 24 | a[f >>> 16 & 255] << 16 | a[l >>> 8 & 255] << 8 | a[255 & c]) ^ i[p++],
+          v = (a[f >>> 24] << 24 | a[l >>> 16 & 255] << 16 | a[c >>> 8 & 255] << 8 | a[255 & u]) ^ i[p++],
+          l = (a[l >>> 24] << 24 | a[c >>> 16 & 255] << 16 | a[u >>> 8 & 255] << 8 | a[255 & f]) ^ i[p++],
+          t[e] = g,
+          t[e + 1] = y,
+          t[e + 2] = v,
+          t[e + 3] = l
         },
         keySize: 8
       });
@@ -452,18 +452,18 @@ var CryptoJS = CryptoJS || function (t, e) {
             n[c] = u << 1 | u >>> 31
           }
           u = (r << 5 | r >>> 27) + h + n[c],
-            u = 20 > c ? u + ((s & o | ~s & a) + 1518500249) : 40 > c ? u + ((s ^ o ^ a) + 1859775393) : 60 > c ? u + ((s & o | s & a | o & a) - 1894007588) : u + ((s ^ o ^ a) - 899497514),
-            h = a,
-            a = o,
-            o = s << 30 | s >>> 2,
-            s = r,
-            r = u
+          u = 20 > c ? u + ((s & o | ~s & a) + 1518500249) : 40 > c ? u + ((s ^ o ^ a) + 1859775393) : 60 > c ? u + ((s & o | s & a | o & a) - 1894007588) : u + ((s ^ o ^ a) - 899497514),
+          h = a,
+          a = o,
+          o = s << 30 | s >>> 2,
+          s = r,
+          r = u
         }
         i[0] = i[0] + r | 0,
-          i[1] = i[1] + s | 0,
-          i[2] = i[2] + o | 0,
-          i[3] = i[3] + a | 0,
-          i[4] = i[4] + h | 0
+        i[1] = i[1] + s | 0,
+        i[2] = i[2] + o | 0,
+        i[3] = i[3] + a | 0,
+        i[4] = i[4] + h | 0
       },
       _doFinalize: function () {
         var t = this._data
@@ -479,7 +479,7 @@ var CryptoJS = CryptoJS || function (t, e) {
       }
     });
   t.SHA1 = r._createHelper(e),
-    t.HmacSHA1 = r._createHmacHelper(e)
+  t.HmacSHA1 = r._createHmacHelper(e)
 }(),
   function () {
     var t = CryptoJS
@@ -494,14 +494,14 @@ var CryptoJS = CryptoJS || function (t, e) {
           i.clamp();
         for (var s = this._oKey = i.clone(), o = this._iKey = i.clone(), a = s.words, h = o.words, c = 0; c < r; c++)
           a[c] ^= 1549556828,
-            h[c] ^= 909522486;
+          h[c] ^= 909522486;
         s.sigBytes = o.sigBytes = n,
           this.reset()
       },
       reset: function () {
         var t = this._hasher;
         t.reset(),
-          t.update(this._iKey)
+        t.update(this._iKey)
       },
       update: function (t) {
         return this._hasher.update(t),
@@ -510,8 +510,8 @@ var CryptoJS = CryptoJS || function (t, e) {
       finalize: function (t) {
         var e = this._hasher;
         return t = e.finalize(t),
-          e.reset(),
-          e.finalize(this._oKey.clone().concat(t))
+        e.reset(),
+        e.finalize(this._oKey.clone().concat(t))
       }
     })
   }(),
@@ -895,11 +895,11 @@ var JSEncryptExports = {};
   }
   function I(t) {
     this.m = t,
-      this.mp = t.invDigit(),
-      this.mpl = 32767 & this.mp,
-      this.mph = this.mp >> 15,
-      this.um = (1 << t.DB - 15) - 1,
-      this.mt2 = 2 * t.t
+    this.mp = t.invDigit(),
+    this.mpl = 32767 & this.mp,
+    this.mph = this.mp >> 15,
+    this.um = (1 << t.DB - 15) - 1,
+    this.mt2 = 2 * t.t
   }
   function N(t) {
     var r = i();
@@ -910,9 +910,7 @@ var JSEncryptExports = {};
   }
   function M(t) {
     var e = i();
-    return t.copyTo(e),
-      this.reduce(e),
-      e
+    return t.copyTo(e), this.reduce(e), e
   }
   function P(t) {
     for (; t.t <= this.mt2;)
@@ -923,19 +921,19 @@ var JSEncryptExports = {};
       for (i = e + this.m.t,
         t[i] += this.m.am(0, r, t, e, 0, this.m.t); t[i] >= t.DV;)
         t[i] -= t.DV,
-          t[++i]++
+        t[++i]++
     }
     t.clamp(),
-      t.drShiftTo(this.m.t, t),
-      t.compareTo(this.m) >= 0 && t.subTo(this.m, t)
+    t.drShiftTo(this.m.t, t),
+    t.compareTo(this.m) >= 0 && t.subTo(this.m, t)
   }
   function V(t, e) {
     t.squareTo(e),
-      this.reduce(e)
+    this.reduce(e)
   }
   function H(t, e, i) {
     t.multiplyTo(e, i),
-      this.reduce(i)
+    this.reduce(i)
   }
   function z() {
     return 0 == (this.t > 0 ? 1 & this[0] : this.s)
@@ -954,7 +952,7 @@ var JSEncryptExports = {};
       else {
         var h = n;
         n = s,
-          s = h
+        s = h
       }
     return r.revert(n)
   }
@@ -965,8 +963,8 @@ var JSEncryptExports = {};
 
   function te() {
     this.i = 0,
-      this.j = 0,
-      this.S = new Array
+    this.j = 0,
+    this.S = new Array
   }
   function ee(t) {
     var e, i, r;
@@ -979,7 +977,7 @@ var JSEncryptExports = {};
         this.S[e] = this.S[i],
         this.S[i] = r;
     this.i = 0,
-      this.j = 0
+    this.j = 0
   }
   function ie() {
     var t;
@@ -1038,13 +1036,13 @@ var JSEncryptExports = {};
   }
   function ce() {
     this.n = null,
-      this.e = 0,
-      this.d = null,
-      this.p = null,
-      this.q = null,
-      this.dmp1 = null,
-      this.dmq1 = null,
-      this.coeff = null
+    this.e = 0,
+    this.d = null,
+    this.p = null,
+    this.q = null,
+    this.dmp1 = null,
+    this.dmq1 = null,
+    this.coeff = null
   }
 
   function fe(t) {
@@ -1075,13 +1073,13 @@ var JSEncryptExports = {};
 
   var Te, we = 0xdeadbeefcafe, Ee = 15715070 == (16777215 & we);
   Ee && "Microsoft Internet Explorer" == navigator.appName ? (e.prototype.am = n, Te = 30) : Ee && "Netscape" != navigator.appName ? (e.prototype.am = r, Te = 26) : (e.prototype.am = s, Te = 28),
-    e.prototype.DB = Te,
-    e.prototype.DM = (1 << Te) - 1,
-    e.prototype.DV = 1 << Te;
+  e.prototype.DB = Te,
+  e.prototype.DM = (1 << Te) - 1,
+  e.prototype.DV = 1 << Te;
   var xe = 52;
   e.prototype.FV = Math.pow(2, xe),
-    e.prototype.F1 = xe - Te,
-    e.prototype.F2 = 2 * Te - xe;
+  e.prototype.F1 = xe - Te,
+  e.prototype.F2 = 2 * Te - xe;
   var Re, Be, De = "0123456789abcdefghijklmnopqrstuvwxyz", _e = new Array;
   for (Re = "0".charCodeAt(0),
     Be = 0; 9 >= Be; ++Be)
@@ -1094,44 +1092,43 @@ var JSEncryptExports = {};
     _e[Re++] = Be;
 
   I.prototype.convert = N,
-    I.prototype.revert = M,
-    I.prototype.reduce = P,
-    I.prototype.mulTo = H,
-    I.prototype.sqrTo = V,
-    e.prototype.copyTo = h,
-    e.prototype.fromInt = c,
-    e.prototype.fromString = f,
-    e.prototype.clamp = l,
-    e.prototype.dlShiftTo = S,
-    e.prototype.drShiftTo = T,
-    e.prototype.lShiftTo = w,
-    e.prototype.rShiftTo = E,
-    e.prototype.subTo = x,
-    e.prototype.multiplyTo = R,
-    e.prototype.squareTo = B,
-    e.prototype.divRemTo = D,
-    e.prototype.invDigit = J,
-    e.prototype.isEven = z,
-    e.prototype.exp = L,
-    e.prototype.toString = p,
-    e.prototype.abs = g,
-    e.prototype.compareTo = y,
-    e.prototype.bitLength = b,
-    e.prototype.modPowInt = q,
-    e.ZERO = u(0),
-    e.ONE = u(1);
+  I.prototype.revert = M,
+  I.prototype.reduce = P,
+  I.prototype.mulTo = H,
+  I.prototype.sqrTo = V,
+  e.prototype.copyTo = h,
+  e.prototype.fromInt = c,
+  e.prototype.fromString = f,
+  e.prototype.clamp = l,
+  e.prototype.dlShiftTo = S,
+  e.prototype.drShiftTo = T,
+  e.prototype.lShiftTo = w,
+  e.prototype.rShiftTo = E,
+  e.prototype.subTo = x,
+  e.prototype.multiplyTo = R,
+  e.prototype.squareTo = B,
+  e.prototype.divRemTo = D,
+  e.prototype.invDigit = J,
+  e.prototype.isEven = z,
+  e.prototype.exp = L,
+  e.prototype.toString = p,
+  e.prototype.abs = g,
+  e.prototype.compareTo = y,
+  e.prototype.bitLength = b,
+  e.prototype.modPowInt = q,
+  e.ZERO = u(0),
+  e.ONE = u(1);
   te.prototype.init = ee,
-    te.prototype.next = ie;
+  te.prototype.next = ie;
   var Oe, Ke, Ue, Ce = 256;
   if (null == Ke) {
     Ke = new Array,
-      Ue = 0;
+    Ue = 0;
     var Je;
     var Ie = new Uint32Array(256);
     for (window.crypto.getRandomValues(Ie),
       Je = 0; Je < Ie.length; ++Je)
       Ke[Ue++] = 255 & Ie[Je]
-
   }
   oe.prototype.nextBytes = se,
     ce.prototype.doPublic = fe,
@@ -1230,10 +1227,10 @@ var JSEncryptExports = {};
       }
       function i(t, e, i, r, n) {
         this.stream = t,
-          this.header = e,
-          this.length = i,
-          this.tag = r,
-          this.sub = n
+        this.header = e,
+        this.length = i,
+        this.tag = r,
+        this.sub = n
       }
       e.prototype.get = function (e) {
         if (e === t && (e = this.pos++),
@@ -1261,18 +1258,10 @@ var JSEncryptExports = {};
             }
         return r
       }
-
-      e.prototype.reTime = /^((?:1[89]|2\d)?\d\d)(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])([01]\d|2[0-3])(?:([0-5]\d)(?:([0-5]\d)(?:[.,](\d{1,3}))?)?)?(Z|[-+](?:[0]\d|1[0-2])([0-5]\d)?)?$/,
-        i.prototype.reSeemsASCII = /^[ -~]+$/,
-        i.prototype.posStart = function () {
-          return this.stream.pos
-        }
-      i.prototype.posEnd = function () {
-        return this.stream.pos + this.header + Math.abs(this.length)
-      }
-      i.prototype.toHexString = function () {
-        return this.stream.hexDump(this.posStart(), this.posEnd(), !0)
-      }
+      i.prototype.reSeemsASCII = /^[ -~]+$/,
+      i.prototype.posStart = function () { return this.stream.pos }
+      i.prototype.posEnd = function () { return this.stream.pos + this.header + Math.abs(this.length) }
+      i.prototype.toHexString = function () { return this.stream.hexDump(this.posStart(), this.posEnd(), !0) }
       i.decodeLength = function (t) {
         var e = t.get()
           , i = 127 & e;
@@ -1353,10 +1342,9 @@ var JSEncryptExports = {};
         , s = window.ASN1.decode(n);
       if (9 === s.sub.length) {
         e = s.sub[1].getHexStringValue(),
-          this.n = ae(e, 16),
-          i = s.sub[2].getHexStringValue(),
-
-          this.e = parseInt(i, 16);
+        this.n = ae(e, 16),
+        i = s.sub[2].getHexStringValue(),
+        this.e = parseInt(i, 16);
         var o = s.sub[3].getHexStringValue();
         this.d = ae(o, 16);
         var a = s.sub[4].getHexStringValue();
@@ -1386,20 +1374,20 @@ var JSEncryptExports = {};
   }
   var Fe = function (t) {
     ce.call(this),
-      t && ("string" == typeof t ? this.parseKey(t) : (this.hasPrivateKeyProperty(t) || this.hasPublicKeyProperty(t)) && this.parsePropertiesFrom(t))
+    t && ("string" == typeof t ? this.parseKey(t) : (this.hasPrivateKeyProperty(t) || this.hasPublicKeyProperty(t)) && this.parsePropertiesFrom(t))
   }
   Fe.prototype = new ce,
     Fe.prototype.constructor = Fe;
   var je = function (t) {
     t = t || {},
-      this.default_key_size = parseInt(t.default_key_size) || 1024,
-      this.default_public_exponent = t.default_public_exponent || "010001",
-      this.log = t.log || !1,
-      this.key = null
+    this.default_key_size = parseInt(t.default_key_size) || 1024,
+    this.default_public_exponent = t.default_public_exponent || "010001",
+    this.log = t.log || !1,
+    this.key = null
   }
   je.prototype.setKey = function (t) {
     this.log && this.key && console.warn("A key was already set, overriding existing."),
-      this.key = new Fe(t)
+    this.key = new Fe(t)
   }
   je.prototype.setPublicKey = function (t) {
     this.setKey(t)
@@ -1414,8 +1402,7 @@ var JSEncryptExports = {};
   }
   je.prototype.getKey = function (t) {
     if (!this.key) {
-      if (this.key = new Fe,
-        t && "[object Function]" === {}.toString.call(t))
+      if (this.key = new Fe, t && "[object Function]" === {}.toString.call(t))
         return void this.key.generateAsync(this.default_key_size, this.default_public_exponent, t);
       this.key.generate(this.default_key_size, this.default_public_exponent)
     }
