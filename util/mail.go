@@ -16,19 +16,22 @@ func Gen_email(tempmail string, session *http.Client, poipoi_token string, poipo
 		if tempmail == "tempmail.lol" {
 			req, err := http.NewRequest("GET", "https://api.tempmail.lol/generate/rush", nil)
 			if err != nil {
-				fmt.Println(err)
+				//fmt.Println(err)
+				continue
 			}
 			req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36")
 
 			resp, err := session.Do(req)
 			if err != nil {
-				fmt.Println(err)
+				//fmt.Println(err)
+				continue
 			}
 			defer resp.Body.Close()
 
 			var mailReq map[string]interface{}
 			if err := json.NewDecoder(resp.Body).Decode(&mailReq); err != nil {
-				fmt.Println(err)
+				//fmt.Println(err)
+				continue
 			}
 
 			//fmt.Println(resp.StatusCode)
@@ -37,36 +40,36 @@ func Gen_email(tempmail string, session *http.Client, poipoi_token string, poipo
 				token := mailReq["token"].(string)
 				//fmt.Println(email, token)
 				//fmt.Println(email, token)
-				return email, token, err
+				return email, token, nil
 
 			}
 			if resp.StatusCode == 429 {
-				fmt.Println("Error: Ratelimited")
-				return "", "", err
+				//fmt.Println("Error: Ratelimited")
+				continue
 			} else {
-				fmt.Println("Error: Failed Get Mail Status Code: ", resp.StatusCode)
-				return "", "", err
+				//fmt.Println("Error: Failed Get Mail Status Code: ", resp.StatusCode)
+				continue
 			}
 		}
 		if tempmail == "tempmail.io" {
 			req, err := http.NewRequest("POST", "https://api.internal.temp-mail.io/api/v3/email/new", nil)
 			if err != nil {
-				fmt.Println(err)
-				return "", "", err
+				//fmt.Println(err)
+				continue
 			}
 			req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36")
 
 			resp, err := session.Do(req)
 			if err != nil {
-				fmt.Println(err)
-				return "", "", err
+				//fmt.Println(err)
+				continue
 			}
 			defer resp.Body.Close()
 
 			var mailReq map[string]interface{}
 			if err := json.NewDecoder(resp.Body).Decode(&mailReq); err != nil {
-				fmt.Println(err)
-				return "", "", err
+				//fmt.Println(err)
+				continue
 			}
 
 			//fmt.Println(resp.StatusCode)
@@ -80,21 +83,21 @@ func Gen_email(tempmail string, session *http.Client, poipoi_token string, poipo
 			}
 			if resp.StatusCode == 429 {
 				fmt.Println("Error: Ratelimited")
-				return "", "", err
+				continue
 			} else {
 				fmt.Println("Error: Failed Get Mail Status Code: ", resp.StatusCode)
-				return "", "", err
+				continue
 			}
 		}
 		if tempmail == "m.kuku.lu" {
-			randomname := "nyagenv2-" + random_string(5) + "-" + random_number(4)
+			randomname := "nyagenv2-" + random_string(10) + "-" + random_number(7)
 			// m.kuku.lu JAPAN ONLY DOMAIN LIST
 			domains := []string{
-				"tatsu.uk", "cocoro.uk", "onlyapp.net", "shchiba.uk", "eripo.net",
+				"tatsu.uk", "cocoro.uk", "shchiba.uk", "eripo.net",
 				"nyasan.com", "xmailer.be", "na-cat.com", "exdonuts.com", "mama3.org",
 				"fukurou.ch", "nezumi.be", "okinawa.li", "nekochan.fr", "sofia.re",
 				"kagi.be", "nagi.be",
-			}
+			} // remove  "onlyapp.net",
 
 			randomIndex := rand.Intn(len(domains))
 
@@ -102,7 +105,7 @@ func Gen_email(tempmail string, session *http.Client, poipoi_token string, poipo
 
 			req, err := http.NewRequest("GET", fmt.Sprintf("https://m.kuku.lu/index.php?action=addMailAddrByManual&by_system=1&csrf_token_check=%s&newdomain=%s&newuser=%s", poipoi_token, random_domain, randomname), nil)
 			if err != nil {
-				return "", "", err
+				continue
 			}
 
 			cookieCsrf := &http.Cookie{Name: "cookie_csrf_token", Value: poipoi_token}
@@ -113,7 +116,7 @@ func Gen_email(tempmail string, session *http.Client, poipoi_token string, poipo
 
 			resp, err := session.Do(req)
 			if err != nil {
-				return "", "", err
+				continue
 			}
 			defer resp.Body.Close()
 
@@ -123,14 +126,17 @@ func Gen_email(tempmail string, session *http.Client, poipoi_token string, poipo
 
 			body, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
-				return "", "", err
+				continue
 			}
 
 			email := strings.Replace(string(body), "OK:", "", 1)
 
+			//fmt.Println(email, randomname, random_domain)
+
 			if strings.HasPrefix(email, "NG:") {
 				// NGの場合は再生成する
-				return "", "", err
+				//return "", "", err
+				continue
 			}
 
 			return email, "", nil
