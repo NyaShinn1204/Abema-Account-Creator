@@ -15,7 +15,7 @@
 
 ## Installation
 
-**※ Go 1.22.3 以上のバージョンが必要です。**
+~~**※ Go 1.22.3 以上のバージョンが必要です。**~~
 
 **※ 残高0円でもいいので KYASH以外のバンドルカードもしくはクレジットカードが必要です。何で使えないのかは下に書いてあります**
 
@@ -27,7 +27,7 @@
 ```bash
 git clone https://github.com/NyaShinn1204/Abema-Account-Creator.git
 
-go run main.go
+nyagenv2.exe
 ```
 
 ## コンフィグについて
