@@ -1,0 +1,16 @@
+[general]
+threads = 1
+delay   = 5.0  # recommended 5.0!!!  
+debug   = false
+
+[tempmail]
+service            = "" # m.kuku.lu or tempmail.lol or tempmail.io
+poipoi_token       = ""
+poipoi_sessionhash = ""
+
+[payment]
+cc_number    = ""
+cc_exp_month = ""
+cc_exp_year  = ""
+cc_name      = ""
+cc_cvv       = ""
